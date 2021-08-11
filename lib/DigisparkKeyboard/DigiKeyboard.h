@@ -27,7 +27,7 @@ typedef uint8_t byte;
 
 
 static uchar    idleRate;           // in 4 ms units 
-
+static uint8_t protocol_version = 0; // see HID1_11.pdf sect 7.2.6
 
 /* We use a simplifed keyboard report descriptor which does not support the
  * boot protocol. We don't allow setting status LEDs and but we do allow
@@ -38,24 +38,38 @@ static uchar    idleRate;           // in 4 ms units
  * for the second INPUT item.
  */
 const PROGMEM unsigned char usbHidReportDescriptor[USB_CFG_HID_REPORT_DESCRIPTOR_LENGTH] = { /* USB report descriptor */
-  0x05, 0x01,                    // USAGE_PAGE (Generic Desktop) 
-  0x09, 0x06,                    // USAGE (Keyboard) 
-  0xa1, 0x01,                    // COLLECTION (Application) 
-  0x05, 0x07,                    //   USAGE_PAGE (Keyboard) 
-  0x19, 0xe0,                    //   USAGE_MINIMUM (Keyboard LeftControl) 
-  0x29, 0xe7,                    //   USAGE_MAXIMUM (Keyboard Right GUI) 
-  0x15, 0x00,                    //   LOGICAL_MINIMUM (0) 
-  0x25, 0x01,                    //   LOGICAL_MAXIMUM (1) 
-  0x75, 0x01,                    //   REPORT_SIZE (1) 
-  0x95, 0x08,                    //   REPORT_COUNT (8) 
-  0x81, 0x02,                    //   INPUT (Data,Var,Abs) 
-  0x95, 0x01,           //   REPORT_COUNT (simultaneous keystrokes) 
-  0x75, 0x08,                    //   REPORT_SIZE (8) 
-  0x25, 0x65,                    //   LOGICAL_MAXIMUM (101) 
-  0x19, 0x00,                    //   USAGE_MINIMUM (Reserved (no event indicated)) 
-  0x29, 0x65,                    //   USAGE_MAXIMUM (Keyboard Application) 
-  0x81, 0x00,                    //   INPUT (Data,Ary,Abs) 
-  0xc0                           // END_COLLECTION 
+   0x05, 0x01,                    // USAGE_PAGE (Generic Desktop)
+   0x09, 0x06,                    // USAGE (Keyboard)
+   0xa1, 0x01,                    // COLLECTION (Application)
+   0x75, 0x01,                    //   REPORT_SIZE (1)
+   0x95, 0x08,                    //   REPORT_COUNT (8)
+   0x05, 0x07,                    //   USAGE_PAGE (Keyboard)(Key Codes)
+   0x19, 0xe0,                    //   USAGE_MINIMUM (Keyboard LeftControl)(224)
+   0x29, 0xe7,                    //   USAGE_MAXIMUM (Keyboard Right GUI)(231)
+   0x15, 0x00,                    //   LOGICAL_MINIMUM (0)
+   0x25, 0x01,                    //   LOGICAL_MAXIMUM (1)
+   0x81, 0x02,                    //   INPUT (Data,Var,Abs) ; Modifier byte
+   0x95, 0x01,                    //   REPORT_COUNT (1)
+   0x75, 0x08,                    //   REPORT_SIZE (8)
+   0x81, 0x03,                    //   INPUT (Cnst,Var,Abs) ; Reserved byte
+   0x95, 0x05,                    //   REPORT_COUNT (5)
+   0x75, 0x01,                    //   REPORT_SIZE (1)
+   0x05, 0x08,                    //   USAGE_PAGE (LEDs)
+   0x19, 0x01,                    //   USAGE_MINIMUM (Num Lock)
+   0x29, 0x05,                    //   USAGE_MAXIMUM (Kana)
+   0x91, 0x02,                    //   OUTPUT (Data,Var,Abs) ; LED report
+   0x95, 0x01,                    //   REPORT_COUNT (1)
+   0x75, 0x03,                    //   REPORT_SIZE (3)
+   0x91, 0x03,                    //   OUTPUT (Cnst,Var,Abs) ; LED report padding
+   0x95, 0x06,                    //   REPORT_COUNT (6)
+   0x75, 0x08,                    //   REPORT_SIZE (8)
+   0x15, 0x00,                    //   LOGICAL_MINIMUM (0)
+   0x25, 0x65,                    //   LOGICAL_MAXIMUM (101)
+   0x05, 0x07,                    //   USAGE_PAGE (Keyboard)(Key Codes)
+   0x19, 0x00,                    //   USAGE_MINIMUM (Reserved (no event indicated))(0)
+   0x29, 0x65,                    //   USAGE_MAXIMUM (Keyboard Application)(101)
+   0x81, 0x00,                    //   INPUT (Data,Ary,Abs)
+   0xc0                           // END_COLLECTION
 };
 
 
@@ -144,8 +158,8 @@ class DigiKeyboardDevice : public Print {
 
     // TODO: Remove the next two lines once we fix
     //       missing first keystroke bug properly.
-    memset(reportBuffer, 0, sizeof(reportBuffer));      
-    usbSetInterrupt(reportBuffer, sizeof(reportBuffer));
+    memset(&reportBuffer, 0, sizeof(reportBuffer));      
+    usbSetInterrupt(reinterpret_cast<unsigned char *>(&reportBuffer), sizeof(reportBuffer));
   }
     
   void update() {
@@ -192,12 +206,12 @@ class DigiKeyboardDevice : public Print {
     	_delay_ms(5);
     }
     
-    memset(reportBuffer, 0, sizeof(reportBuffer));
+    memset(&reportBuffer, 0, sizeof(reportBuffer));
 		
-    reportBuffer[0] = modifiers;
-    reportBuffer[1] = keyPress;
+    reportBuffer.modifier = modifiers;
+    reportBuffer.keycode[0] = keyPress;
     
-    usbSetInterrupt(reportBuffer, sizeof(reportBuffer));
+    usbSetInterrupt(reinterpret_cast<unsigned char *>(&reportBuffer), sizeof(reportBuffer));
   }
   
   size_t write(uint8_t chr) {
@@ -205,9 +219,15 @@ class DigiKeyboardDevice : public Print {
     sendKeyStroke(data & 0b01111111, data >> 7 ? MOD_SHIFT_RIGHT : 0);
     return 1;
   }
-    
-  //private: TODO: Make friend?
-  uchar    reportBuffer[2];    // buffer for HID reports [ 1 modifier byte + (len-1) key strokes]
+  
+  struct KeyboardReport{
+   uint8_t modifier;
+   uint8_t reserved;
+   uint8_t keycode[6];
+  };
+
+  KeyboardReport    reportBuffer;
+  uint8_t    led_states;
   using Print::write;
 };
 
@@ -215,37 +235,60 @@ DigiKeyboardDevice DigiKeyboard = DigiKeyboardDevice();
 
 #ifdef __cplusplus
 extern "C"{
-#endif 
-  // USB_PUBLIC uchar usbFunctionSetup
-	uchar usbFunctionSetup(uchar data[8]) {
-    usbRequest_t    *rq = (usbRequest_t *)((void *)data);
+#endif
+// see http://vusb.wikidot.com/driver-api
+// constants are found in usbdrv.h
+usbMsgLen_t usbFunctionSetup(uint8_t data[8])
+{
+   // see HID1_11.pdf sect 7.2 and http://vusb.wikidot.com/driver-api
+   usbRequest_t *rq = (usbRequest_t *)((void *)data);
 
-    usbMsgPtr = DigiKeyboard.reportBuffer; //
-    if ((rq->bmRequestType & USBRQ_TYPE_MASK) == USBRQ_TYPE_CLASS) {
-      /* class request type */
+   if ((rq->bmRequestType & USBRQ_TYPE_MASK) != USBRQ_TYPE_CLASS)
+   return 0; // ignore request if it's not a class specific request
 
-      if (rq->bRequest == USBRQ_HID_GET_REPORT) {
-				/* wValue: ReportType (highbyte), ReportID (lowbyte) */
-
-				/* we only have one report type, so don't look at wValue */
-        // TODO: Ensure it's okay not to return anything here?    
-				return 0;
-
-      } else if (rq->bRequest == USBRQ_HID_GET_IDLE) {
-				//usbMsgPtr = &idleRate;
-				//return 1;
-				return 0;
-				
-      } else if (rq->bRequest == USBRQ_HID_SET_IDLE) {
-				idleRate = rq->wValue.bytes[1];
-				
+   // see HID1_11.pdf sect 7.2
+   switch (rq->bRequest)
+   {
+      case USBRQ_HID_GET_IDLE:
+      usbMsgPtr = &idleRate; // send data starting from this byte
+      return 1; // send 1 byte
+      case USBRQ_HID_SET_IDLE:
+      idleRate = rq->wValue.bytes[1]; // read in idle rate
+      return 0; // send nothing
+      case USBRQ_HID_GET_PROTOCOL:
+      usbMsgPtr = &protocol_version; // send data starting from this byte
+      return 1; // send 1 byte
+      case USBRQ_HID_SET_PROTOCOL:
+      protocol_version = rq->wValue.bytes[1];
+      return 0; // send nothing
+      case USBRQ_HID_GET_REPORT:
+      usbMsgPtr = reinterpret_cast<unsigned char *>(&DigiKeyboard.reportBuffer); // send the report data
+      return sizeof(DigiKeyboard.reportBuffer);
+      case USBRQ_HID_SET_REPORT:
+      if (rq->wLength.word == 1) // check data is available
+      {
+         // 1 byte, we don't check report type (it can only be output or feature)
+         // we never implemented "feature" reports so it can't be feature
+         // so assume "output" reports
+         // this means set LED status
+         // since it's the only one in the descriptor
+         return USB_NO_MSG; // send nothing but call usbFunctionWrite
       }
-    } else {
-      /* no vendor specific requests implemented */
-    }
-		
-    return 0;
-  }
+      else // no data or do not understand data, ignore
+      {
+         return 0; // send nothing
+      }
+      default: // do not understand data, ignore
+      return 0; // send nothing
+   }
+}
+
+usbMsgLen_t usbFunctionWrite(uint8_t * data, uchar len)
+{
+   DigiKeyboard.led_states = data[0];
+   return 1; // 1 byte read
+}
+
 #ifdef __cplusplus
 } // extern "C"
 #endif

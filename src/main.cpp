@@ -15,9 +15,11 @@ void loop() {
   // prevent missing the first character after a delay:
   DigiKeyboard.sendKeyStroke(0);
 
+  String test = String("LEDs: ") + String(DigiKeyboard.led_states);
+
   // Type out this string letter by letter on the computer (assumes US-style
   // keyboard)
-  DigiKeyboard.println("Hello Digispark!");
+  DigiKeyboard.println(test);
 
   // It's better to use DigiKeyboard.delay() over the regular Arduino delay()
   // if doing keyboard stuff because it keeps talking to the computer to make
