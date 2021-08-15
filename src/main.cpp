@@ -1,9 +1,8 @@
 #include <Arduino.h>
 
-// https://github.com/digistump/DigistumpArduino
-
-
 #include <DigiKeyboard.h>
+
+#include "entries.h"
 
 void setup() {
   // don't need to set anything up to use DigiKeyboard
