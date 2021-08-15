@@ -7,34 +7,50 @@ Due to this being a cursed artifact, it has some limitations in how it can commu
 '''
 
 LINE_LEN = 100
+CENTER = False
+LINE_OFFSET = 4
 
 out_file = 'src/entries.h'
 
+HEADER_TOP = '''
+void Exit();
+
+void NoOp(uint8_t from, uint8_t to) {}
+'''
+
 TEXT_BLOCKS = {
   'start': (
-    'Hello.',
-    ['one', 'two', 'three']
+    ['Hello.'],
+    ['one', 'two', 'three', 'exit'],
+    None
   ),
   'one': (
-    "one.\ntest? I Don't know?",
-    ['start', 'two', 'three']
+    ["one.","test? I Don't know?"],
+    ['start', 'two', 'three', 'exit'],
+    None
   ),
   'two': (
-    'two.',
-    ['start', 'one', 'three']
+    ['two.'],
+    ['start', 'one', 'three', 'exit'],
+    None
   ),
   'three': (
-    'three.',
-    ['start', 'one', 'two']
+    ['three.'],
+    ['start', 'one', 'two', 'exit'],
+    None
   ),
-
+  'exit': (
+    ['three.'],
+    [],
+    'Exit();'
+  ),
 }
 
 
 
 def validate_entries():
   for key, entry in TEXT_BLOCKS.items():
-    for line in entry[0].split('\n'):
+    for line in entry[0]:
       if len(line) > LINE_LEN:
         print(f'Line {line} in {key} is {len(line) - LINE_LEN} too long')
         return False
@@ -53,9 +69,12 @@ def validate_entries():
 def test(key):
   print('=' * LINE_LEN + '\n')
   entry = TEXT_BLOCKS[key]
-  for line in entry[0].split('\n'):
-    spacing = int((LINE_LEN - len(line)) / 2)
-    print(' ' * spacing, end='')
+  for line in entry[0]:
+    if CENTER:
+      line_offset = int((LINE_LEN - len(line)) / 2)
+    else:
+      line_offset = LINE_OFFSET
+    print(' ' * line_offset, end='')
     print(line)
   print()
   key_total = sum([len(choice) for choice in entry[1]])
@@ -68,25 +87,45 @@ def test(key):
 
 def compile():
   with open(out_file, 'w') as fd:
+    fd.write(HEADER_TOP + '\n')
     key_strs = '", "'.join(TEXT_BLOCKS.keys())
     key_idx = {k: str(i) for i, k in enumerate(TEXT_BLOCKS.keys())}
-    fd.write(f'const PROGMEM char MENU_KEYS[] = {{"{key_strs}"}};\n')
+    fd.write(f'const char* const MENU_KEYS[] PROGMEM = {{"{key_strs}"}};\n')
     entries = []
     choices = []
+    callbacks = []
     for key, entry in TEXT_BLOCKS.items():
-      fixed_entry = entry[0].replace('\n','\\n')
-      fd.write(f'const PROGMEM char ENTRY_{key.upper()}[] = "{fixed_entry}";\n')
-      fixed_chioces = ', '.join([str(len(entry[1]))] + [key_idx[i] for i in entry[1]])
-      fd.write(f'const PROGMEM uint8_t CHOICES_{key.upper()}[] = {{{fixed_chioces}}};\n')
+      fixed_entry = []
+      for line in entry[0]:
+        if CENTER:
+          line_offset = int((LINE_LEN - len(line)) / 2)
+        else:
+          line_offset = LINE_OFFSET
+        fixed_entry.append(' ' * line_offset + line)
+      fixed_entry = '\\n'.join(fixed_entry)
+      fd.write(f'const char ENTRY_{key.upper()}[] PROGMEM = "{fixed_entry}";\n')
+      fixed_chioces = ', '.join([key_idx[i] for i in entry[1]])
+      fd.write(f'const uint8_t CHOICES_{key.upper()}[] PROGMEM = {{{fixed_chioces}}};\n')
+      if entry[2]:
+        func_name = 'Callback' + key.capitalize()
+        fd.write(f'void {func_name}(uint8_t from, uint8_t to) {{\n{entry[2]}\n}}\n')
+        callbacks.append(func_name)
+      else:
+        callbacks.append('NoOp')
       entries.append('ENTRY_' + key.upper())
       choices.append('CHOICES_' + key.upper())
     entries_str = ', '.join(entries)
     choices_str = ', '.join(choices)
-    fd.write(f'const PROGMEM char* ENTRIES[] = {{{entries_str}}};\n')
-    fd.write(f'const PROGMEM uint8_t* CHOICES[] = {{{choices_str}}};\n')
+    choice_counts_str = ', '.join([str(len(x[1])) for x in TEXT_BLOCKS.values()])
+    callback_str = ', '.join(callbacks)
+    fd.write(f'const char* const ENTRIES[] PROGMEM = {{{entries_str}}};\n')
+    fd.write(f'const uint8_t* const CHOICES[] PROGMEM= {{{choices_str}}};\n')
+    fd.write(f'const uint8_t CHOICE_COUNTS[] PROGMEM = {{{choice_counts_str}}};\n')
+    fd.write(f'void (*ENTRY_CALLBACKS[]) (uint8_t from, uint8_t to) = {{{callback_str}}};\n')
 
 def main():
-  validate_entries()
+  if not validate_entries():
+    return
   # test('one')
   compile()
 
