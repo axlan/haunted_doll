@@ -6,7 +6,7 @@ Here's a gift that should be familiar from long ago. I'm not sure if "haunted do
 Due to this being a cursed artifact, it has some limitations in how it can communicate. While a little more advanced then spirit rapping, this doll can only communicate by presenting itself as a USB keyboard. This means you should be able to connect it to any computer, open a notepad-esque application, and invoke it by double pressing Num Lock twice. Keep in mind it can only "hear" the Num, Scroll, and Caps lock keys. If you interact with the document it's typing in the message will be messed up. The doll is also only the master of a very ancient USB protocol, and may not be able to make itself heard on newer hardware. Using the included cable should make this more likely to work, but an older Windows machine is probably more likely to work then a new Mac.
 '''
 
-LINE_LEN = 100
+LINE_LEN = 70
 CENTER = False
 LINE_OFFSET = 4
 
@@ -90,7 +90,7 @@ def compile():
     fd.write(HEADER_TOP + '\n')
     key_strs = '", "'.join(TEXT_BLOCKS.keys())
     key_idx = {k: str(i) for i, k in enumerate(TEXT_BLOCKS.keys())}
-    fd.write(f'const char* const MENU_KEYS[] PROGMEM = {{"{key_strs}"}};\n')
+    fd.write(f'const char* const MENU_KEYS[] = {{"{key_strs}"}};\n')
     entries = []
     choices = []
     callbacks = []
@@ -105,7 +105,7 @@ def compile():
       fixed_entry = '\\n'.join(fixed_entry)
       fd.write(f'const char ENTRY_{key.upper()}[] PROGMEM = "{fixed_entry}";\n')
       fixed_chioces = ', '.join([key_idx[i] for i in entry[1]])
-      fd.write(f'const uint8_t CHOICES_{key.upper()}[] PROGMEM = {{{fixed_chioces}}};\n')
+      fd.write(f'const uint8_t CHOICES_{key.upper()}[] = {{{fixed_chioces}}};\n')
       if entry[2]:
         func_name = 'Callback' + key.capitalize()
         fd.write(f'void {func_name}(uint8_t from, uint8_t to) {{\n{entry[2]}\n}}\n')
@@ -118,9 +118,9 @@ def compile():
     choices_str = ', '.join(choices)
     choice_counts_str = ', '.join([str(len(x[1])) for x in TEXT_BLOCKS.values()])
     callback_str = ', '.join(callbacks)
-    fd.write(f'const char* const ENTRIES[] PROGMEM = {{{entries_str}}};\n')
-    fd.write(f'const uint8_t* const CHOICES[] PROGMEM= {{{choices_str}}};\n')
-    fd.write(f'const uint8_t CHOICE_COUNTS[] PROGMEM = {{{choice_counts_str}}};\n')
+    fd.write(f'const char* const ENTRIES[] = {{{entries_str}}};\n')
+    fd.write(f'const uint8_t* const CHOICES[] = {{{choices_str}}};\n')
+    fd.write(f'const uint8_t CHOICE_COUNTS[] = {{{choice_counts_str}}};\n')
     fd.write(f'void (*ENTRY_CALLBACKS[]) (uint8_t from, uint8_t to) = {{{callback_str}}};\n')
 
 def main():
