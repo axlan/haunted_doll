@@ -95,7 +95,7 @@ class EntryUI {
 
  private:
   static const size_t NUM_COLS = 70;
-  static const size_t LINES_BETWEEN_ENTRIES = 30;
+  static const size_t LINES_BETWEEN_ENTRIES = 40;
   uint8_t entry_active = 0;
   uint8_t selected_choice = 0;
   uint8_t num_choices = 0;
