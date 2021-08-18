@@ -3,7 +3,7 @@
 
 #include "entries.h"
 
-unsigned long max_double_click_time_ms = 1000;
+const unsigned long MAX_DOUBLE_CLICK_TIME_MS = 1000;
 
 unsigned long last_activate_time = 0;
 bool active = false;
@@ -11,6 +11,17 @@ bool active = false;
 void Exit() { active = false; }
 
 uint8_t last_led_states = 0;
+
+char ToggleCase(char in) {
+  const char CASE_OFFSET = 'a' - 'A';
+  if (in >= 'a' && in <= 'z') {
+    return in - CASE_OFFSET;
+  }
+  if (in >= 'A' && in <= 'Z') {
+    return in + CASE_OFFSET;
+  }
+  return in;
+}
 
 void Print(const char* ptr, bool pgm_mem = false) {
   while(true) {
@@ -22,6 +33,9 @@ void Print(const char* ptr, bool pgm_mem = false) {
     }
     if (c == 0) {
       break;
+    }
+    if (DigiKeyboard.led_states & 0b10) {
+      c = ToggleCase(c);
     }
     DigiKeyboard.write(c);
   }
@@ -125,11 +139,37 @@ void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
 }
 
+void HandleFullKeyboard() {
+  if (NumLockPressed()) {
+    entry_ui.IncrementChoice();
+  } else if (CapsLockPressed()) {
+    entry_ui.DecrementChoice();
+  } else if (ScrollLockPressed()) {
+    entry_ui.Select();
+  }
+}
+
+unsigned long MAX_DOUBLE_CLICK_TIME_SELECT_MS = 350;
+unsigned long last_select_time = 0;
+void HandleCapsOnly() {
+  if (CapsLockPressed()) {
+    if (last_select_time == 0) {
+      last_select_time = millis();
+    } else {
+      entry_ui.Select();
+      last_select_time = 0;
+    }
+  } else if (last_select_time != 0 && (millis() - last_select_time) > MAX_DOUBLE_CLICK_TIME_SELECT_MS) {
+    entry_ui.IncrementChoice();
+    last_select_time = 0;
+  }
+}
+
 void loop() {
   if (!active) {
-    if (NumLockPressed()) {
+    if (CapsLockPressed()) {
       if (last_activate_time == 0 ||
-          (millis() - last_activate_time) > max_double_click_time_ms) {
+          (millis() - last_activate_time) > MAX_DOUBLE_CLICK_TIME_MS) {
         last_activate_time = millis();
       } else {
         active = true;
@@ -137,16 +177,11 @@ void loop() {
       }
     }
   } else {
-    if (NumLockPressed()) {
-      entry_ui.IncrementChoice();
-    } else if (CapsLockPressed()) {
-      entry_ui.DecrementChoice();
-    } else if (ScrollLockPressed()) {
-      entry_ui.Select();
-    }
+    // HandleFullKeyboard();
+    HandleCapsOnly();
   }
   digitalWrite(LED_BUILTIN, active);
 
   last_led_states = DigiKeyboard.led_states;
-  DigiKeyboard.delay(100);
+  DigiKeyboard.delay(50);
 }
