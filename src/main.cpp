@@ -10,6 +10,45 @@ bool active = false;
 
 void Exit() { active = false; }
 
+uint8_t UpdateCrc(uint8_t crc, uint8_t val)
+{
+  size_t j;
+  crc ^= val;
+  for (j = 0; j < 8; j++)
+  {
+    if ((crc & 0x80) != 0)
+      crc = (uint8_t)((crc << 1) ^ 0x31);
+    else
+      crc <<= 1;
+  }
+  return crc;
+}
+
+
+uint8_t GenCrc(uint8_t *data, size_t len)
+{
+  uint8_t crc = 0xff;
+  size_t i;
+  for (i = 0; i < len; i++)
+  {
+    crc = UpdateCrc(crc, data[i]);
+  }
+  return crc;
+}
+
+
+uint8_t score;
+void AddToScore(uint8_t choice) {
+  UpdateCrc(score, choice);
+}
+
+const char END_TEXT[] PROGMEM = "You win!";
+const char* extra_text = nullptr;
+void ShowScore() {
+  extra_text = END_TEXT;
+  score = 0;
+}
+
 uint8_t last_led_states = 0;
 
 char ToggleCase(char in) {
@@ -55,21 +94,26 @@ void RepeatKeyStroke(byte stroke, byte modifiers, size_t num) {
 class EntryUI {
  public:
   void ChooseEntry(uint8_t idx) {
+    score = 0;
     entry_active = idx;
     selected_choice = 0;
     num_choices = CHOICE_COUNTS[idx];
     RepeatKeyStroke(KEY_EQUALS, NUM_COLS);
     RepeatKeyStroke(KEY_ENTER, 2);
     Print(ENTRIES[idx], true);
+    if (extra_text) {
+      Print(extra_text, true);
+      extra_text = nullptr;
+    }
     RepeatKeyStroke(KEY_ENTER, 2);
     uint8_t choice_len = 0;
     for (int i = 0; i < num_choices; i++) {
-      choice_len += strlen(MENU_KEYS[CHOICES[idx][i]]);
+      choice_len += strlen(MENU_LABELS[idx][i]);
     }
     padding = (NUM_COLS - choice_len) / (num_choices + 1);
     for (int i = 0; i < num_choices; i++) {
       RepeatKeyStroke(KEY_SPACE, padding);
-      Print(MENU_KEYS[CHOICES[idx][i]]);
+      Print(MENU_LABELS[idx][i]);
     }
     DigiKeyboard.sendKeyStroke(KEY_ENTER);
     DigiKeyboard.sendKeyStroke(KEY_ARROW_UP);
@@ -89,7 +133,7 @@ class EntryUI {
     RepeatKeyStroke(KEY_ARROW_DOWN, 3);
     RepeatKeyStroke(KEY_ENTER, LINES_BETWEEN_ENTRIES);
     uint8_t choice = CHOICES[entry_active][selected_choice];
-    ENTRY_CALLBACKS[choice](entry_active, choice);
+    ENTRY_CALLBACKS[choice](entry_active, choice, selected_choice);
     ChooseEntry(choice);
   }
 
@@ -110,12 +154,11 @@ class EntryUI {
     int i;
     for (i = 0; i <= idx; i++) {
       RepeatKeyStroke(KEY_ARROW_RIGHT, padding);
+      size_t label_len = strlen(MENU_LABELS[entry_active][i]); 
       if (i == idx) {
-        RepeatKeyStroke(KEY_ARROW_RIGHT, MOD_SHIFT_LEFT,
-                        strlen(MENU_KEYS[CHOICES[entry_active][i]]));
+        RepeatKeyStroke(KEY_ARROW_RIGHT, MOD_SHIFT_LEFT, label_len);
       } else {
-        RepeatKeyStroke(KEY_ARROW_RIGHT,
-                        strlen(MENU_KEYS[CHOICES[entry_active][i]]));
+        RepeatKeyStroke(KEY_ARROW_RIGHT, label_len);
       }
     }
   }

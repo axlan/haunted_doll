@@ -15,8 +15,10 @@ out_file = 'src/entries.h'
 
 HEADER_TOP = '''
 void Exit();
+void AddToScore(uint8_t choice);
+void ShowScore();
 
-void NoOp(uint8_t from, uint8_t to) {}
+void NoOp(uint8_t from, uint8_t to, uint8_t choice) {}
 '''
 
 TEXT_BLOCKS = {
@@ -52,8 +54,24 @@ TEXT_BLOCKS = {
     ["While of course you two are perfect for each other,",
      "what if instead of being born as flesh and blood humans,",
      "you were instead a pair of possessed dolls?"],
-    ['Start', 'Exit'],
+    ['Question 1', 'Exit'],
     None
+  ),
+  'Question 1': (
+    ["As you walk by a well, a fairy emerges.",
+     "It says that she caught a watch you dropped and tries",
+     "to return it to you. Do you:",
+     "1. Take the Watch.",
+     "2. Tell her you didn't drop anything.",
+     "3. Run away.",
+     "4. Try to catch it."],
+    [('1', 'Complete'), ('2', 'Complete'), ('3', 'Complete'), ('4', 'Complete'), 'Exit'],
+    None
+  ),
+  'Complete' : (
+    ["Yay you finished"],
+    [('Restart', 'Start'), 'Exit'],
+    'AddToScore(choice);\nShowScore();'
   ),
   'Exit': (
     ['Good Bye!', 'May your love be as eternal as I am.'],
@@ -75,6 +93,8 @@ def validate_entries():
       print(f'Choices in {key} are {key_len - LINE_LEN} too long')
       return False
     for choice in entry[1]:
+      if type(choice) == tuple:
+        choice = choice[1]
       if choice not in TEXT_BLOCKS:
         print(f'Choice {choice} in {key} not valid')
         return False
@@ -104,11 +124,10 @@ def test(key):
 def compile():
   with open(out_file, 'w') as fd:
     fd.write(HEADER_TOP + '\n')
-    key_strs = '", "'.join(TEXT_BLOCKS.keys())
     key_idx = {k: str(i) for i, k in enumerate(TEXT_BLOCKS.keys())}
-    fd.write(f'const char* const MENU_KEYS[] = {{"{key_strs}"}};\n')
     entries = []
     choices = []
+    choice_labels = []
     callbacks = []
     for key, entry in TEXT_BLOCKS.items():
       key = re.sub(r"[^a-zA-Z\d]", "_", key)
@@ -119,26 +138,35 @@ def compile():
         else:
           line_offset = LINE_OFFSET
         fixed_entry.append(' ' * line_offset + line)
+      for i in range(len(entry[1])):
+        if type(entry[1][i]) != tuple:
+          entry[1][i] = (entry[1][i], entry[1][i])
       fixed_entry = '\\n'.join(fixed_entry)
       fd.write(f'const char ENTRY_{key.upper()}[] PROGMEM = "{fixed_entry}";\n')
-      fixed_chioces = ', '.join([key_idx[i] for i in entry[1]])
-      fd.write(f'const uint8_t CHOICES_{key.upper()}[] = {{{fixed_chioces}}};\n')
+      fixed_choices = ', '.join([key_idx[i[1]] for i in entry[1]])
+      fixed_labels = '", "'.join([i[0] for i in entry[1]])
+      fd.write(f'const uint8_t CHOICES_{key.upper()}[] = {{{fixed_choices}}};\n')
+      fd.write(f'const char* const CHOICES_LABELS_{key.upper()}[] = {{"{fixed_labels}"}};\n')
       if entry[2]:
         func_name = 'Callback' + key.capitalize()
-        fd.write(f'void {func_name}(uint8_t from, uint8_t to) {{\n{entry[2]}\n}}\n')
+        fd.write(f'void {func_name}(uint8_t from, uint8_t to, uint8_t choice) {{\n{entry[2]}\n}}\n')
         callbacks.append(func_name)
       else:
         callbacks.append('NoOp')
       entries.append('ENTRY_' + key.upper())
       choices.append('CHOICES_' + key.upper())
+      choice_labels.append('CHOICES_LABELS_' + key.upper())
     entries_str = ', '.join(entries)
     choices_str = ', '.join(choices)
+    choice_labels_str = ', '.join(choice_labels)
     choice_counts_str = ', '.join([str(len(x[1])) for x in TEXT_BLOCKS.values()])
     callback_str = ', '.join(callbacks)
+    
+    fd.write(f'const char* const* const MENU_LABELS[] = {{{choice_labels_str}}};\n')
     fd.write(f'const char* const ENTRIES[] = {{{entries_str}}};\n')
     fd.write(f'const uint8_t* const CHOICES[] = {{{choices_str}}};\n')
     fd.write(f'const uint8_t CHOICE_COUNTS[] = {{{choice_counts_str}}};\n')
-    fd.write(f'void (*ENTRY_CALLBACKS[]) (uint8_t from, uint8_t to) = {{{callback_str}}};\n')
+    fd.write(f'void (*ENTRY_CALLBACKS[]) (uint8_t from, uint8_t to, uint8_t choice) = {{{callback_str}}};\n')
 
 def main():
   if not validate_entries():
