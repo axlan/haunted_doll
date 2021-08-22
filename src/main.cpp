@@ -24,7 +24,6 @@ uint8_t UpdateCrc(uint8_t crc, uint8_t val)
   return crc;
 }
 
-
 uint8_t GenCrc(uint8_t *data, size_t len)
 {
   uint8_t crc = 0xff;
@@ -35,7 +34,6 @@ uint8_t GenCrc(uint8_t *data, size_t len)
   }
   return crc;
 }
-
 
 uint8_t score;
 void AddToScore(uint8_t choice) {
@@ -102,6 +100,7 @@ class EntryUI {
     RepeatKeyStroke(KEY_ENTER, 2);
     Print(ENTRIES[idx], true);
     if (extra_text) {
+      RepeatKeyStroke(KEY_ENTER, 2);
       Print(extra_text, true);
       extra_text = nullptr;
     }
