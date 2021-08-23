@@ -10,41 +10,73 @@ bool active = false;
 
 void Exit() { active = false; }
 
-uint8_t UpdateCrc(uint8_t crc, uint8_t val)
-{
-  size_t j;
-  crc ^= val;
-  for (j = 0; j < 8; j++)
-  {
-    if ((crc & 0x80) != 0)
-      crc = (uint8_t)((crc << 1) ^ 0x31);
-    else
-      crc <<= 1;
-  }
-  return crc;
-}
-
-uint8_t GenCrc(uint8_t *data, size_t len)
-{
-  uint8_t crc = 0xff;
-  size_t i;
-  for (i = 0; i < len; i++)
-  {
-    crc = UpdateCrc(crc, data[i]);
-  }
-  return crc;
-}
-
-uint8_t score;
-void AddToScore(uint8_t choice) {
-  UpdateCrc(score, choice);
-}
-
-const char END_TEXT[] PROGMEM = "You win!";
-const char* extra_text = nullptr;
-void ShowScore() {
-  extra_text = END_TEXT;
+uint32_t score;
+uint8_t score_idx;
+void ClearScore() {
   score = 0;
+  score_idx = 0;
+}
+
+void AddToScore(uint8_t choice) {
+  score += choice << (2 * score_idx);
+  score_idx++;
+}
+
+const char DOLL_TYPES_0[] PROGMEM = "Witch's";
+const char DOLL_TYPES_1[] PROGMEM = "Voodoo";
+const char DOLL_TYPES_2[] PROGMEM = "Attic";
+const char DOLL_TYPES_3[] PROGMEM = "Chucky-esque";
+const char DOLL_TYPES_4[] PROGMEM = "Robot AI";
+const char DOLL_TYPES_5[] PROGMEM = "Melted Wax";
+const char DOLL_TYPES_6[] PROGMEM = "Sewn Skin";
+const char DOLL_TYPES_7[] PROGMEM = "Non-Euclidean";
+const char DOLL_TYPES_8[] PROGMEM = "Porcelain";
+const char DOLL_TYPES_9[] PROGMEM = "Eldritch";
+const char DOLL_TYPES_10[] PROGMEM = "Victorian";
+const char DOLL_TYPES_11[] PROGMEM = "Clown";
+const char *const DOLL_TYPES[] PROGMEM = {DOLL_TYPES_0, DOLL_TYPES_1, DOLL_TYPES_2, DOLL_TYPES_3, DOLL_TYPES_4, DOLL_TYPES_5, DOLL_TYPES_6, DOLL_TYPES_7, DOLL_TYPES_8, DOLL_TYPES_9, DOLL_TYPES_10, DOLL_TYPES_11};
+
+const char DOLL_ADJECTIVES_0[] PROGMEM = "Glowing";
+const char DOLL_ADJECTIVES_1[] PROGMEM = "Humming";
+const char DOLL_ADJECTIVES_2[] PROGMEM = "Whispering";
+const char DOLL_ADJECTIVES_3[] PROGMEM = "Floating";
+const char DOLL_ADJECTIVES_4[] PROGMEM = "Giggling";
+const char DOLL_ADJECTIVES_5[] PROGMEM = "Metallic";
+const char DOLL_ADJECTIVES_6[] PROGMEM = "Bent";
+const char DOLL_ADJECTIVES_7[] PROGMEM = "Cracked";
+const char DOLL_ADJECTIVES_8[] PROGMEM = "Immovable";
+const char DOLL_ADJECTIVES_9[] PROGMEM = "Eyeless";
+const char DOLL_ADJECTIVES_10[] PROGMEM = "Vibrating";
+const char DOLL_ADJECTIVES_11[] PROGMEM = "Dusty";
+const char *const DOLL_ADJECTIVES[] PROGMEM = {DOLL_ADJECTIVES_0, DOLL_ADJECTIVES_1, DOLL_ADJECTIVES_2, DOLL_ADJECTIVES_3, DOLL_ADJECTIVES_4, DOLL_ADJECTIVES_5, DOLL_ADJECTIVES_6, DOLL_ADJECTIVES_7, DOLL_ADJECTIVES_8, DOLL_ADJECTIVES_9, DOLL_ADJECTIVES_10, DOLL_ADJECTIVES_11};
+
+char * PrgmStrCpy(char* dst, const char* src) {
+  for (size_t i = 0;; i++) {
+    char c = pgm_read_byte(src + i);
+    if (c == 0) {
+      return dst + i;
+    }
+    dst[i] = c;
+  }
+  return nullptr;
+}
+
+const char* extra_text = nullptr;
+char score_buffer[50];
+void ShowScore() {
+  uint8_t idx1 = score & 0xF;
+  uint8_t idx2 = (score & 0xF0) >> 4;
+  char* buffer = score_buffer;
+  buffer = PrgmStrCpy(buffer, PSTR("Haunted "));
+  const char* adj_ptr = (const char*)pgm_read_word(DOLL_ADJECTIVES + idx1);
+  buffer = PrgmStrCpy(buffer, adj_ptr);
+  buffer = PrgmStrCpy(buffer, PSTR(" "));
+  const char* type_ptr = (const char*)pgm_read_word(DOLL_TYPES + idx2);
+  buffer = PrgmStrCpy(buffer, type_ptr);
+  buffer = PrgmStrCpy(buffer, PSTR(" Dolls"));
+  *buffer = 0;
+  extra_text = score_buffer;
+  ClearScore();
 }
 
 uint8_t last_led_states = 0;
@@ -92,7 +124,7 @@ void RepeatKeyStroke(byte stroke, byte modifiers, size_t num) {
 class EntryUI {
  public:
   void ChooseEntry(uint8_t idx) {
-    score = 0;
+    ClearScore();
     entry_active = idx;
     selected_choice = 0;
     num_choices = CHOICE_COUNTS[idx];
@@ -101,7 +133,7 @@ class EntryUI {
     Print(ENTRIES[idx], true);
     if (extra_text) {
       RepeatKeyStroke(KEY_ENTER, 2);
-      Print(extra_text, true);
+      Print(extra_text);
       extra_text = nullptr;
     }
     RepeatKeyStroke(KEY_ENTER, 2);
@@ -178,7 +210,6 @@ bool ScrollLockPressed() { return LockPressed(2); }
 
 void setup() {
   // don't need to set anything up to use DigiKeyboard
-  pinMode(LED_BUILTIN, OUTPUT);
 }
 
 void HandleFullKeyboard() {
@@ -222,7 +253,6 @@ void loop() {
     // HandleFullKeyboard();
     HandleCapsOnly();
   }
-  digitalWrite(LED_BUILTIN, active);
 
   last_led_states = DigiKeyboard.led_states;
   DigiKeyboard.delay(50);

@@ -9,7 +9,7 @@ Due to this being a cursed artifact, it has some limitations in how it can commu
 
 LINE_LEN = 70
 CENTER = False
-LINE_OFFSET = 4
+LINE_OFFSET = 0
 
 out_file = 'src/entries.h'
 
@@ -65,11 +65,35 @@ TEXT_BLOCKS = {
      "2. Tell her you didn't drop anything.",
      "3. Run away.",
      "4. Try to catch it."],
+    [('1', 'Question 2'), ('2', 'Question 2'), ('3', 'Question 2'), ('4', 'Question 2'), 'Exit'],
+    None
+  ),
+  'Question 2': (
+    ["As you walk by a well, a fairy emerges.",
+     "It says that she caught a watch you dropped and tries",
+     "to return it to you. Do you:",
+     "1. Take the Watch.",
+     "2. Tell her you didn't drop anything.",
+     "3. Run away.",
+     "4. Try to catch it."],
+    [('1', 'Question 3'), ('2', 'Question 3'), ('3', 'Question 3'), ('4', 'Question 3'), 'Exit'],
+    None
+  ),
+  'Question 3': (
+    ["As you walk by a well, a fairy emerges.",
+     "It says that she caught a watch you dropped and tries",
+     "to return it to you. Do you:",
+     "1. Take the Watch.",
+     "2. Tell her you didn't drop anything.",
+     "3. Run away.",
+     "4. Try to catch it."],
     [('1', 'Complete'), ('2', 'Complete'), ('3', 'Complete'), ('4', 'Complete'), 'Exit'],
     None
   ),
   'Complete' : (
-    ["Yay you finished"],
+    ["Yay you finished!",
+     "After carefully tabulating your results,",
+     "the dolls you most resonate with are:"],
     [('Restart', 'Start'), 'Exit'],
     'AddToScore(choice);\nShowScore();'
   ),
@@ -80,7 +104,15 @@ TEXT_BLOCKS = {
   ),
 }
 
-
+def list_to_prgmem(name, strings):
+  ret = ''
+  vars = []
+  for i, string in enumerate(strings):
+    var = f'{name}_{i}'
+    vars.append(var)
+    ret += f'const char {var}[] PROGMEM = "{string}";\n'
+  ret += f'const char *const {name}[] PROGMEM = {{{", ".join(vars)}}};'
+  return ret
 
 def validate_entries():
   for key, entry in TEXT_BLOCKS.items():
@@ -174,6 +206,38 @@ def main():
   # test('one')
   compile()
 
+  
+  DOLL_ADJECTIVES = [
+    "Glowing",
+    "Humming",
+    "Whispering",
+    "Floating",
+    "Giggling",
+    "Metallic",
+    "Bent",
+    "Cracked",
+    "Immovable",
+    "Eyeless",
+    "Vibrating",
+    "Dusty"
+  ]
+  DOLL_TYPES = [
+    "Witch's",
+    "Voodoo",
+    "Attic",
+    "Chucky-esque",
+    "Robot AI",
+    "Melted Wax",
+    "Sewn Skin",
+    "Non-Euclidean",
+    "Porcelain",
+    "Eldritch",
+    "Victorian",
+    "Clown",
+  ]
+
+  print(list_to_prgmem('DOLL_TYPES', DOLL_TYPES))
+  print(list_to_prgmem('DOLL_ADJECTIVES', DOLL_ADJECTIVES))
 
 if __name__ == "__main__":
   main()
