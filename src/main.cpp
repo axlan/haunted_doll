@@ -22,33 +22,25 @@ void AddToScore(uint8_t choice) {
   score_idx++;
 }
 
-const char DOLL_TYPES_0[] PROGMEM = "Witch's";
-const char DOLL_TYPES_1[] PROGMEM = "Voodoo";
-const char DOLL_TYPES_2[] PROGMEM = "Attic";
-const char DOLL_TYPES_3[] PROGMEM = "Chucky-esque";
-const char DOLL_TYPES_4[] PROGMEM = "Robot AI";
-const char DOLL_TYPES_5[] PROGMEM = "Melted Wax";
-const char DOLL_TYPES_6[] PROGMEM = "Sewn Skin";
-const char DOLL_TYPES_7[] PROGMEM = "Non-Euclidean";
-const char DOLL_TYPES_8[] PROGMEM = "Porcelain";
-const char DOLL_TYPES_9[] PROGMEM = "Eldritch";
-const char DOLL_TYPES_10[] PROGMEM = "Victorian";
-const char DOLL_TYPES_11[] PROGMEM = "Clown";
-const char *const DOLL_TYPES[] PROGMEM = {DOLL_TYPES_0, DOLL_TYPES_1, DOLL_TYPES_2, DOLL_TYPES_3, DOLL_TYPES_4, DOLL_TYPES_5, DOLL_TYPES_6, DOLL_TYPES_7, DOLL_TYPES_8, DOLL_TYPES_9, DOLL_TYPES_10, DOLL_TYPES_11};
+const char DOLL_TYPES_0[] PROGMEM = "Voodoo";
+const char DOLL_TYPES_1[] PROGMEM = "Chucky-esque";
+const char DOLL_TYPES_2[] PROGMEM = "Melted Wax";
+const char DOLL_TYPES_3[] PROGMEM = "Sewn Skin";
+const char DOLL_TYPES_4[] PROGMEM = "Non-Euclidean";
+const char DOLL_TYPES_5[] PROGMEM = "Porcelain";
+const char DOLL_TYPES_6[] PROGMEM = "Eldritch";
+const char DOLL_TYPES_7[] PROGMEM = "Clown";
+const char *const DOLL_TYPES[] PROGMEM = {DOLL_TYPES_0, DOLL_TYPES_1, DOLL_TYPES_2, DOLL_TYPES_3, DOLL_TYPES_4, DOLL_TYPES_5, DOLL_TYPES_6, DOLL_TYPES_7};
 
 const char DOLL_ADJECTIVES_0[] PROGMEM = "Glowing";
-const char DOLL_ADJECTIVES_1[] PROGMEM = "Humming";
-const char DOLL_ADJECTIVES_2[] PROGMEM = "Whispering";
-const char DOLL_ADJECTIVES_3[] PROGMEM = "Floating";
-const char DOLL_ADJECTIVES_4[] PROGMEM = "Giggling";
-const char DOLL_ADJECTIVES_5[] PROGMEM = "Metallic";
-const char DOLL_ADJECTIVES_6[] PROGMEM = "Bent";
-const char DOLL_ADJECTIVES_7[] PROGMEM = "Cracked";
-const char DOLL_ADJECTIVES_8[] PROGMEM = "Immovable";
-const char DOLL_ADJECTIVES_9[] PROGMEM = "Eyeless";
-const char DOLL_ADJECTIVES_10[] PROGMEM = "Vibrating";
-const char DOLL_ADJECTIVES_11[] PROGMEM = "Dusty";
-const char *const DOLL_ADJECTIVES[] PROGMEM = {DOLL_ADJECTIVES_0, DOLL_ADJECTIVES_1, DOLL_ADJECTIVES_2, DOLL_ADJECTIVES_3, DOLL_ADJECTIVES_4, DOLL_ADJECTIVES_5, DOLL_ADJECTIVES_6, DOLL_ADJECTIVES_7, DOLL_ADJECTIVES_8, DOLL_ADJECTIVES_9, DOLL_ADJECTIVES_10, DOLL_ADJECTIVES_11};
+const char DOLL_ADJECTIVES_1[] PROGMEM = "Whispering";
+const char DOLL_ADJECTIVES_2[] PROGMEM = "Floating";
+const char DOLL_ADJECTIVES_3[] PROGMEM = "Giggling";
+const char DOLL_ADJECTIVES_4[] PROGMEM = "Bent";
+const char DOLL_ADJECTIVES_5[] PROGMEM = "Cracked";
+const char DOLL_ADJECTIVES_6[] PROGMEM = "Eyeless";
+const char DOLL_ADJECTIVES_7[] PROGMEM = "Vibrating";
+const char *const DOLL_ADJECTIVES[] PROGMEM = {DOLL_ADJECTIVES_0, DOLL_ADJECTIVES_1, DOLL_ADJECTIVES_2, DOLL_ADJECTIVES_3, DOLL_ADJECTIVES_4, DOLL_ADJECTIVES_5, DOLL_ADJECTIVES_6, DOLL_ADJECTIVES_7};
 
 char * PrgmStrCpy(char* dst, const char* src) {
   for (size_t i = 0;; i++) {
@@ -64,19 +56,18 @@ char * PrgmStrCpy(char* dst, const char* src) {
 const char* extra_text = nullptr;
 char score_buffer[50];
 void ShowScore() {
-  uint8_t idx1 = score & 0xF;
-  uint8_t idx2 = (score & 0xF0) >> 4;
+  uint8_t idx1 = score & 0b111;
+  uint8_t idx2 = (score >> 3) & 0b111;
   char* buffer = score_buffer;
   buffer = PrgmStrCpy(buffer, PSTR("Haunted "));
-  const char* adj_ptr = (const char*)pgm_read_word(DOLL_ADJECTIVES + idx1);
+  const char* adj_ptr = (const char*)pgm_read_ptr(DOLL_ADJECTIVES + idx1);
   buffer = PrgmStrCpy(buffer, adj_ptr);
   buffer = PrgmStrCpy(buffer, PSTR(" "));
-  const char* type_ptr = (const char*)pgm_read_word(DOLL_TYPES + idx2);
+  const char* type_ptr = (const char*)pgm_read_ptr(DOLL_TYPES + idx2);
   buffer = PrgmStrCpy(buffer, type_ptr);
   buffer = PrgmStrCpy(buffer, PSTR(" Dolls"));
   *buffer = 0;
   extra_text = score_buffer;
-  ClearScore();
 }
 
 uint8_t last_led_states = 0;
@@ -124,7 +115,6 @@ void RepeatKeyStroke(byte stroke, byte modifiers, size_t num) {
 class EntryUI {
  public:
   void ChooseEntry(uint8_t idx) {
-    ClearScore();
     entry_active = idx;
     selected_choice = 0;
     num_choices = CHOICE_COUNTS[idx];

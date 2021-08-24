@@ -17,6 +17,7 @@ HEADER_TOP = '''
 void Exit();
 void AddToScore(uint8_t choice);
 void ShowScore();
+void ClearScore();
 
 void NoOp(uint8_t from, uint8_t to, uint8_t choice) {}
 '''
@@ -26,7 +27,7 @@ TEXT_BLOCKS = {
     ["Hello Amelia and/or Paul! I'm the haunted doll Zozo!",
      "Tap the \\\"Caps Lock\\\" key to move the cursor.",
      "Double click it to select the response.",
-     "Since this is for your wedding how about a relationship quiz?"],
+     "Since this is for your wedding, how about a relationship quiz?"],
     ['Zozo?', 'Are you stealing data?', 'Quiz', 'Exit'],
     None
   ),
@@ -40,7 +41,7 @@ TEXT_BLOCKS = {
     None
   ),
   'Are you stealing data?': (
-    ["Well, not sure why you'd trust me",
+    ["Well, not sure why you'd trust me,",
      "but I can't actually listen to your key presses.",
      "I can only listen for the keys that trigger lights.",
      "You know, like scroll, num, and caps lock.",
@@ -63,7 +64,7 @@ TEXT_BLOCKS = {
      "3. Run away.",
      "4. Try to catch it."],
     [('1', 'Question 2'), ('2', 'Question 2'), ('3', 'Question 2'), ('4', 'Question 2'), 'Exit'],
-    None
+    'ClearScore();\nAddToScore(choice);'
   ),
   'Question 2': (
     ["You find a locked hidden door in your house. Do you:",
@@ -72,17 +73,17 @@ TEXT_BLOCKS = {
      "3. Scour the neighborhood for info.",
      "4. Drill a hole and send a camera in."],
     [('1', 'Question 3'), ('2', 'Question 3'), ('3', 'Question 3'), ('4', 'Question 3'), 'Exit'],
-    None
+    'AddToScore(choice);'
   ),
   'Question 3': (
-    ["You are transported into a Toy story like world.",
+    ["You are transported into a Toy Story like world.",
      "Which if the following would you prefer as your tour guide?",
      "1. A Trolls doll",
      "2. A Bratz Doll",
      "3. Barbie",
      "4. A generic dollar store doll"],
     [('1', 'Complete'), ('2', 'Complete'), ('3', 'Complete'), ('4', 'Complete'), 'Exit'],
-    None
+    'AddToScore(choice);'
   ),
   'Complete' : (
     ["Yay you finished!",
@@ -203,31 +204,23 @@ def main():
   
   DOLL_ADJECTIVES = [
     "Glowing",
-    "Humming",
     "Whispering",
     "Floating",
     "Giggling",
-    "Metallic",
     "Bent",
     "Cracked",
-    "Immovable",
     "Eyeless",
-    "Vibrating",
-    "Dusty"
+    "Vibrating"
   ]
   DOLL_TYPES = [
-    "Witch's",
     "Voodoo",
-    "Attic",
     "Chucky-esque",
-    "Robot AI",
     "Melted Wax",
     "Sewn Skin",
     "Non-Euclidean",
     "Porcelain",
     "Eldritch",
-    "Victorian",
-    "Clown",
+    "Clown"
   ]
 
   print(list_to_prgmem('DOLL_TYPES', DOLL_TYPES))
