@@ -59,7 +59,6 @@ void ShowScore() {
   uint8_t idx1 = score & 0b111;
   uint8_t idx2 = (score >> 3) & 0b111;
   char* buffer = score_buffer;
-  buffer = PrgmStrCpy(buffer, PSTR("Haunted "));
   const char* adj_ptr = (const char*)pgm_read_ptr(DOLL_ADJECTIVES + idx1);
   buffer = PrgmStrCpy(buffer, adj_ptr);
   buffer = PrgmStrCpy(buffer, PSTR(" "));
@@ -200,6 +199,7 @@ bool ScrollLockPressed() { return LockPressed(2); }
 
 void setup() {
   // don't need to set anything up to use DigiKeyboard
+    pinMode(LED_BUILTIN, OUTPUT);
 }
 
 void HandleFullKeyboard() {
@@ -243,6 +243,7 @@ void loop() {
     // HandleFullKeyboard();
     HandleCapsOnly();
   }
+    digitalWrite(LED_BUILTIN, active);
 
   last_led_states = DigiKeyboard.led_states;
   DigiKeyboard.delay(50);
