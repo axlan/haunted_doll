@@ -51,14 +51,11 @@ TEXT_BLOCKS = {
     None
   ),
   'Quiz': (
-    ["While of course you two are perfect for each other,",
-     "what if instead of being born as flesh and blood humans,",
-     "you were instead a pair of possessed dolls?"],
-    ['Question 1', 'Exit'],
-    None
-  ),
-  'Question 1': (
-    ["As you walk by a well, a fairy emerges.",
+    ["While you two are perfect for each other,",
+     "what if instead of being flesh and blood humans,",
+     "you were instead a pair of possessed dolls?",
+     "Here are some questions to find out:\\n",
+     "As you walk by a well, a fairy emerges.",
      "It says that she caught a watch you dropped and tries",
      "to return it to you. Do you:",
      "1. Take the Watch.",
@@ -69,24 +66,21 @@ TEXT_BLOCKS = {
     None
   ),
   'Question 2': (
-    ["As you walk by a well, a fairy emerges.",
-     "It says that she caught a watch you dropped and tries",
-     "to return it to you. Do you:",
-     "1. Take the Watch.",
-     "2. Tell her you didn't drop anything.",
-     "3. Run away.",
-     "4. Try to catch it."],
+    ["You find a locked hidden door in your house. Do you:",
+     "1. Cut the lock and check it out.",
+     "2. Re-hide it.",
+     "3. Scour the neighborhood for info.",
+     "4. Drill a hole and send a camera in."],
     [('1', 'Question 3'), ('2', 'Question 3'), ('3', 'Question 3'), ('4', 'Question 3'), 'Exit'],
     None
   ),
   'Question 3': (
-    ["As you walk by a well, a fairy emerges.",
-     "It says that she caught a watch you dropped and tries",
-     "to return it to you. Do you:",
-     "1. Take the Watch.",
-     "2. Tell her you didn't drop anything.",
-     "3. Run away.",
-     "4. Try to catch it."],
+    ["You are transported into a Toy story like world.",
+     "Which if the following would you prefer as your tour guide?",
+     "1. A Trolls doll",
+     "2. A Bratz Doll",
+     "3. Barbie",
+     "4. A generic dollar store doll"],
     [('1', 'Complete'), ('2', 'Complete'), ('3', 'Complete'), ('4', 'Complete'), 'Exit'],
     None
   ),
