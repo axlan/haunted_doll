@@ -14,10 +14,14 @@ LINE_OFFSET = 0
 out_file = 'src/entries.h'
 
 HEADER_TOP = '''
+
+#include "quiz_score.h"
+
+char score_buffer[50];
+
 void Exit();
-void AddToScore(uint8_t choice);
-void ShowScore();
-void ClearScore();
+
+void ShowScore(const char* buffer);
 
 void NoOp(uint8_t from, uint8_t to, uint8_t choice) {}
 '''
@@ -90,7 +94,7 @@ TEXT_BLOCKS = {
      "After carefully tabulating your results,",
      "the dolls you most resonate with are:"],
     [('Restart', 'Start'), 'Exit'],
-    'AddToScore(choice);\nShowScore();'
+    'AddToScore(choice);\nCopyScoreStr(score_buffer);\nShowScore(score_buffer);'
   ),
   'Exit': (
     ['Good Bye!', 'May your love be as eternal as I am.'],

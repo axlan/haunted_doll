@@ -1,194 +1,27 @@
 #include <Arduino.h>
+
 #include <DigiKeyboard.h>
 
-#include "entries.h"
+#include "keyboard_ui.h" 
 
 const unsigned long MAX_DOUBLE_CLICK_TIME_MS = 1000;
 
 unsigned long last_activate_time = 0;
 bool active = false;
 
-void Exit() { active = false; }
-
-uint32_t score;
-uint8_t score_idx;
-void ClearScore() {
-  score = 0;
-  score_idx = 0;
-}
-
-void AddToScore(uint8_t choice) {
-  score += choice << (2 * score_idx);
-  score_idx++;
-}
-
-const char DOLL_TYPES_0[] PROGMEM = "Voodoo";
-const char DOLL_TYPES_1[] PROGMEM = "Chucky-esque";
-const char DOLL_TYPES_2[] PROGMEM = "Melted Wax";
-const char DOLL_TYPES_3[] PROGMEM = "Sewn Skin";
-const char DOLL_TYPES_4[] PROGMEM = "Non-Euclidean";
-const char DOLL_TYPES_5[] PROGMEM = "Porcelain";
-const char DOLL_TYPES_6[] PROGMEM = "Eldritch";
-const char DOLL_TYPES_7[] PROGMEM = "Clown";
-const char *const DOLL_TYPES[] PROGMEM = {DOLL_TYPES_0, DOLL_TYPES_1, DOLL_TYPES_2, DOLL_TYPES_3, DOLL_TYPES_4, DOLL_TYPES_5, DOLL_TYPES_6, DOLL_TYPES_7};
-
-const char DOLL_ADJECTIVES_0[] PROGMEM = "Glowing";
-const char DOLL_ADJECTIVES_1[] PROGMEM = "Whispering";
-const char DOLL_ADJECTIVES_2[] PROGMEM = "Floating";
-const char DOLL_ADJECTIVES_3[] PROGMEM = "Giggling";
-const char DOLL_ADJECTIVES_4[] PROGMEM = "Bent";
-const char DOLL_ADJECTIVES_5[] PROGMEM = "Cracked";
-const char DOLL_ADJECTIVES_6[] PROGMEM = "Eyeless";
-const char DOLL_ADJECTIVES_7[] PROGMEM = "Vibrating";
-const char *const DOLL_ADJECTIVES[] PROGMEM = {DOLL_ADJECTIVES_0, DOLL_ADJECTIVES_1, DOLL_ADJECTIVES_2, DOLL_ADJECTIVES_3, DOLL_ADJECTIVES_4, DOLL_ADJECTIVES_5, DOLL_ADJECTIVES_6, DOLL_ADJECTIVES_7};
-
-char * PrgmStrCpy(char* dst, const char* src) {
-  for (size_t i = 0;; i++) {
-    char c = pgm_read_byte(src + i);
-    if (c == 0) {
-      return dst + i;
-    }
-    dst[i] = c;
-  }
-  return nullptr;
-}
-
-const char* extra_text = nullptr;
-char score_buffer[50];
-void ShowScore() {
-  uint8_t idx1 = score & 0b111;
-  uint8_t idx2 = (score >> 3) & 0b111;
-  char* buffer = score_buffer;
-  const char* adj_ptr = (const char*)pgm_read_ptr(DOLL_ADJECTIVES + idx1);
-  buffer = PrgmStrCpy(buffer, adj_ptr);
-  buffer = PrgmStrCpy(buffer, PSTR(" "));
-  const char* type_ptr = (const char*)pgm_read_ptr(DOLL_TYPES + idx2);
-  buffer = PrgmStrCpy(buffer, type_ptr);
-  buffer = PrgmStrCpy(buffer, PSTR(" Dolls"));
-  *buffer = 0;
-  extra_text = score_buffer;
-}
-
 uint8_t last_led_states = 0;
-
-char ToggleCase(char in) {
-  const char CASE_OFFSET = 'a' - 'A';
-  if (in >= 'a' && in <= 'z') {
-    return in - CASE_OFFSET;
-  }
-  if (in >= 'A' && in <= 'Z') {
-    return in + CASE_OFFSET;
-  }
-  return in;
-}
-
-void Print(const char* ptr, bool pgm_mem = false) {
-  while(true) {
-    char c;
-    if (pgm_mem) {
-      c = pgm_read_byte_near(ptr++);
-    } else {
-      c = *(ptr++);
-    }
-    if (c == 0) {
-      break;
-    }
-    if (DigiKeyboard.led_states & 0b10) {
-      c = ToggleCase(c);
-    }
-    DigiKeyboard.write(c);
-  }
-}
-
-void RepeatKeyStroke(byte stroke, size_t num) {
-  for (size_t i = 0; i < num; i++) {
-    DigiKeyboard.sendKeyStroke(stroke);
-  }
-}
-
-void RepeatKeyStroke(byte stroke, byte modifiers, size_t num) {
-  for (size_t i = 0; i < num; i++) {
-    DigiKeyboard.sendKeyStroke(stroke, modifiers);
-  }
-}
-class EntryUI {
- public:
-  void ChooseEntry(uint8_t idx) {
-    entry_active = idx;
-    selected_choice = 0;
-    num_choices = CHOICE_COUNTS[idx];
-    RepeatKeyStroke(KEY_EQUALS, NUM_COLS);
-    RepeatKeyStroke(KEY_ENTER, 2);
-    Print(ENTRIES[idx], true);
-    if (extra_text) {
-      RepeatKeyStroke(KEY_ENTER, 2);
-      Print(extra_text);
-      extra_text = nullptr;
-    }
-    RepeatKeyStroke(KEY_ENTER, 2);
-    uint8_t choice_len = 0;
-    for (int i = 0; i < num_choices; i++) {
-      choice_len += strlen(MENU_LABELS[idx][i]);
-    }
-    padding = (NUM_COLS - choice_len) / (num_choices + 1);
-    for (int i = 0; i < num_choices; i++) {
-      RepeatKeyStroke(KEY_SPACE, padding);
-      Print(MENU_LABELS[idx][i]);
-    }
-    DigiKeyboard.sendKeyStroke(KEY_ENTER);
-    DigiKeyboard.sendKeyStroke(KEY_ARROW_UP);
-    HighLight(selected_choice);
-  }
-
-  void IncrementChoice() {
-    selected_choice = (selected_choice + 1) % num_choices;
-    HighLight(selected_choice);
-  }
-  void DecrementChoice() {
-    selected_choice =
-        (selected_choice == 0) ? num_choices - 1 : selected_choice - 1;
-    HighLight(selected_choice);
-  }
-  void Select() {
-    RepeatKeyStroke(KEY_ARROW_DOWN, 3);
-    RepeatKeyStroke(KEY_ENTER, LINES_BETWEEN_ENTRIES);
-    uint8_t choice = CHOICES[entry_active][selected_choice];
-    ENTRY_CALLBACKS[choice](entry_active, choice, selected_choice);
-    ChooseEntry(choice);
-  }
-
- private:
-  static const size_t NUM_COLS = 70;
-  static const size_t LINES_BETWEEN_ENTRIES = 40;
-  uint8_t entry_active = 0;
-  uint8_t selected_choice = 0;
-  uint8_t num_choices = 0;
-  uint8_t padding = 0;
-
-  void HighLight(uint8_t idx) {
-    if (num_choices == 0) {
-      return;
-    }
-    DigiKeyboard.sendKeyStroke(KEY_ARROW_UP);
-    DigiKeyboard.sendKeyStroke(KEY_ARROW_RIGHT);
-    int i;
-    for (i = 0; i <= idx; i++) {
-      RepeatKeyStroke(KEY_ARROW_RIGHT, padding);
-      size_t label_len = strlen(MENU_LABELS[entry_active][i]); 
-      if (i == idx) {
-        RepeatKeyStroke(KEY_ARROW_RIGHT, MOD_SHIFT_LEFT, label_len);
-      } else {
-        RepeatKeyStroke(KEY_ARROW_RIGHT, label_len);
-      }
-    }
-  }
-};
 
 EntryUI entry_ui;
 
+void Exit() { active = false; }
+
+void ShowScore(const char* buffer) {
+  entry_ui.SetExtraText(buffer);
+}
+
 // Bits 0 1 2 = Num Caps Scroll
 bool LockPressed(uint8_t offset) {
-  return bitRead(last_led_states ^ DigiKeyboard.led_states, offset);
+  return bitRead(last_led_states ^ DigiKeyboardDevice::GetInstance().led_states, offset);
 }
 
 bool NumLockPressed() { return LockPressed(0); }
@@ -199,7 +32,6 @@ bool ScrollLockPressed() { return LockPressed(2); }
 
 void setup() {
   // don't need to set anything up to use DigiKeyboard
-    pinMode(LED_BUILTIN, OUTPUT);
 }
 
 void HandleFullKeyboard() {
@@ -243,8 +75,7 @@ void loop() {
     // HandleFullKeyboard();
     HandleCapsOnly();
   }
-    digitalWrite(LED_BUILTIN, active);
 
-  last_led_states = DigiKeyboard.led_states;
-  DigiKeyboard.delay(50);
+  last_led_states = DigiKeyboardDevice::GetInstance().led_states;
+  DigiKeyboardDevice::GetInstance().delay(50);
 }
