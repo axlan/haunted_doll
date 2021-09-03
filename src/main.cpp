@@ -8,6 +8,7 @@ const unsigned long MAX_DOUBLE_CLICK_TIME_MS = 1000;
 
 unsigned long last_activate_time = 0;
 bool active = false;
+bool caps_lock_only = false;
 
 uint8_t last_led_states = 0;
 
@@ -62,18 +63,22 @@ void HandleCapsOnly() {
 
 void loop() {
   if (!active) {
-    if (CapsLockPressed()) {
+    if (DigiKeyboardDevice::GetInstance().led_states != last_led_states) {
       if (last_activate_time == 0 ||
           (millis() - last_activate_time) > MAX_DOUBLE_CLICK_TIME_MS) {
         last_activate_time = millis();
       } else {
         active = true;
+        caps_lock_only = CapsLockPressed();
         entry_ui.ChooseEntry(0);
       }
     }
   } else {
-    // HandleFullKeyboard();
-    HandleCapsOnly();
+    if(caps_lock_only) {
+      HandleCapsOnly();
+    } else {
+      HandleFullKeyboard();
+    }
   }
 
   last_led_states = DigiKeyboardDevice::GetInstance().led_states;
