@@ -2,13 +2,16 @@
 
 #include <DigiKeyboard.h>
 
-#include "keyboard_ui.h" 
+#include "keyboard_ui.h"
 
 const unsigned long MAX_DOUBLE_CLICK_TIME_MS = 1000;
 
 unsigned long last_activate_time = 0;
 bool active = false;
+
+#ifdef FULL_KEYBOARD_SUPPORT
 bool caps_lock_only = false;
+#endif
 
 uint8_t last_led_states = 0;
 
@@ -33,6 +36,7 @@ bool ScrollLockPressed() { return LockPressed(2); }
 
 void setup() {
   // don't need to set anything up to use DigiKeyboard
+  DDRB  |= 1 << 1;
 }
 
 void HandleFullKeyboard() {
@@ -69,16 +73,22 @@ void loop() {
         last_activate_time = millis();
       } else {
         active = true;
+#ifdef FULL_KEYBOARD_SUPPORT
         caps_lock_only = CapsLockPressed();
+#endif
         entry_ui.ChooseEntry(0);
       }
     }
   } else {
+#ifdef FULL_KEYBOARD_SUPPORT
     if(caps_lock_only) {
       HandleCapsOnly();
     } else {
       HandleFullKeyboard();
     }
+#else
+    HandleCapsOnly();
+#endif
   }
 
   last_led_states = DigiKeyboardDevice::GetInstance().led_states;

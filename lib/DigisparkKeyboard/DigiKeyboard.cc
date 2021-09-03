@@ -67,19 +67,19 @@ DigiKeyboardDevice::DigiKeyboardDevice () {
 
 
   usbInit();
-    
+
   sei();
 
   // TODO: Remove the next two lines once we fix
   //       missing first keystroke bug properly.
-  memset(&reportBuffer, 0, sizeof(reportBuffer));      
+  memset(&reportBuffer, 0, sizeof(reportBuffer));
   usbSetInterrupt(reinterpret_cast<unsigned char *>(&reportBuffer), sizeof(reportBuffer));
 }
-    
+
 void DigiKeyboardDevice::update() {
   usbPoll();
 }
-	
+
 // delay while updating until we are finished delaying
 void DigiKeyboardDevice::delay(long milli) {
   unsigned long last = millis();
@@ -112,6 +112,9 @@ void DigiKeyboardDevice::sendKeyPress(uint8_t keyPress) {
 //sendKeyPress: sends a key press only, with modifiers - no release
 //to release the key, send again with keyPress=0
 void DigiKeyboardDevice::sendKeyPress(uint8_t keyPress, uint8_t modifiers) {
+  if (keyPress == KEY_ENTER) {
+    PORTB ^= 1 << 1;
+  }
   while (!usbInterruptIsReady()) {
     // Note: We wait until we can send keyPress
     //       so we know the previous keyPress was
@@ -119,12 +122,12 @@ void DigiKeyboardDevice::sendKeyPress(uint8_t keyPress, uint8_t modifiers) {
     usbPoll();
     _delay_ms(5);
   }
-  
+
   memset(&reportBuffer, 0, sizeof(reportBuffer));
-  
+
   reportBuffer.modifier = modifiers;
   reportBuffer.keycode[0] = keyPress;
-  
+
   usbSetInterrupt(reinterpret_cast<unsigned char *>(&reportBuffer), sizeof(reportBuffer));
 }
 
